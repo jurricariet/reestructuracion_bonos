@@ -15,9 +15,10 @@ lista_bonos %>%
   geom_smooth(method = "glm", formula = y~x,
               method.args = list(family = gaussian(link = 'log')),linetype='dashed',se = F)+
   scale_y_continuous(labels=scales::percent_format())+
+  scale_x_continuous(breaks = seq(1,6,by=.5))+
   theme_minimal()+
   scale_color_manual(name='',values = c('#75aadb','#fcbf45'))+
   theme(legend.position = 'top')+
   labs(y='TIR (%)',x='Duration modificada',title='Bonos en USD',
        subtitle = 'Curva de rendimientos según ley')
-  
+    
