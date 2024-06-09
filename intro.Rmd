@@ -1,0 +1,228 @@
+---
+title: "Reestructuración de deuda"
+author:  ""
+output:
+  xaringan::moon_reader:
+    seal: false
+    css: "presentacion_theme.css"
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: true
+---
+
+class:inverse, middle
+
+background-position: 95% 95%
+background-size: 20%
+
+
+# Reestructuración de deuda
+
+## Introducción
+
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+
+```{r presentacion_theme, include=FALSE, warning=FALSE, eval=TRUE,echo=F}
+library(xaringanExtra)
+library(ghibli)
+# BARRA DE PROGRESO DE PRESENTACION
+xaringanExtra::use_progress_bar(color = ghibli::ghibli_palette(2)[4])
+# LAPIZ 
+xaringanExtra::use_scribble()
+# EXPLORADOR DE SLIDES
+xaringanExtra::use_tile_view()
+# HABILITAR WEBCAM
+xaringanExtra::use_webcam()
+library(xaringanthemer) #EVAL FALSE
+library(lubridate)
+library(tidyverse)
+style_mono_light(outfile = "presentacion_theme.css", # CSS FILE
+                 # FONTS
+                  header_font_google = google_font('Encode Sans'),
+                  text_font_google   = google_font('Roboto'),
+                  code_font_google   = google_font('IBM Plex Mono'),
+                 # COLORES
+                 base_color = ghibli::ghibli_palette(2)[4],
+                 code_inline_color = ghibli::ghibli_palette(2)[4],
+                 inverse_link_color = ghibli::ghibli_palette(2)[4],
+                 background_color = "#FFFFFF",
+                 title_slide_background_image = "",
+                 title_slide_background_position = "95% 5%",
+                 title_slide_background_size = "200px", footnote_color = ghibli::ghibli_palette(2)[4], link_color = ghibli::ghibli_palette(2)[3],text_slide_number_font_size = "16px"
+
+                 )
+```
+
+
+---
+
+
+```{r  ,message=FALSE, warning=FALSE, echo = FALSE}
+source('cash_flow_bonos.R')
+resumen_bonos <- readxl::read_excel('resumen_bonos.xlsx')%>% 
+  mutate(part_monto = monto/sum(monto))
+```
+
+```{r,message=FALSE, warning=FALSE, echo = FALSE}
+fmi <- data.frame(fmi = c(11.2, 11.7,
+15.3,
+19.3, 19.6,
+18.4, 18.3,
+16.8,
+13.0,
+10.0),
+anio = c(2025:2034))
+```
+
+```{r,message=FALSE, warning=FALSE, echo = FALSE}
+total_anio <- bonos_anio %>% 
+  group_by(anio) %>% 
+  summarise(intereses = sum(intereses),
+            amortizacion=sum(amortizacion)) %>% 
+  ungroup() %>% 
+  mutate(total_bonos = intereses + amortizacion) %>% 
+  left_join(fmi %>% mutate(fmi=as.numeric(fmi*1e+9))) %>% 
+  mutate(total_con_fmi = total_bonos+fmi)
+
+prom_25_35 <- total_anio %>% 
+  filter(anio %in% c(2025:2035)) %>% 
+  summarise(promedio = mean(total_bonos)) %>% 
+  pull(promedio)
+
+prom_25_34_fmi <-  total_anio %>% 
+  filter(anio %in% c(2025:2034)) %>% 
+  summarise(promedio = mean(total_con_fmi)) %>% 
+  pull(promedio)
+```
+
+
+Entre 2025 y 2035, Argentina deberá afrontar vencimientos en dólares, incluyendo pagos de amortización e intereses de sus bonos, por un promedio de US$ `r format( prom_25_35/1e+6,decimal.mark = ',',big.mark='.')` millones al año.
+
+
+```{r,message=FALSE, warning=FALSE, echo = FALSE,out.width='80%',out.height='80%'}
+# plotly::ggplotly(bonos_anio %>% 
+#   pivot_longer(cols=c(intereses,amortizacion),names_to="tipo",values_to = "val") %>% 
+#   mutate(tipo = factor(tipo,levels=c('amortizacion','intereses'))) %>% 
+#   ggplot()+
+#   geom_col(aes(as.factor(anio),y=val,group=tipo,fill=tipo))+
+#   theme_minimal()+
+#   ggthemes::scale_fill_economist(name='')+
+#   scale_y_continuous(labels = scales::number_format(scale = 1/1e+6,big.mark = '.'))+
+#   theme(legend.position = 'top',
+#         axis.text.x = element_text(angle=90))+
+#   labs(x='',y='',title='Vencimientos de bonos en dólares',
+#        subtitle='En millones de USD'))
+library(highcharter)
+bonos_long <- total_anio %>% 
+  pivot_longer(cols=c(intereses,amortizacion),names_to="tipo",values_to = "val") %>% 
+  mutate(tipo = factor(tipo,levels=c('amortizacion','intereses')))
+
+hchart(bonos_long,"column",
+  hcaes(x = anio, y = val, group = tipo)) %>% 
+  hc_plotOptions(column = list(stacking = "normal")) %>%
+   hc_title(text = "Vencimientos de bonos en dólares") %>%
+  hc_subtitle(text = "")
+```
+
+---
+
+
+-   Texto texto 
+```{r,message=FALSE, warning=FALSE, echo = FALSE,out.width='80%',out.height='80%'}
+especie_anio <- bonos_anio <- bonos_df %>% 
+  mutate(anio = lubridate::year(fecha)) %>% 
+  group_by(anio,simbolo) %>% 
+  summarise(intereses = sum(monto_interes),
+            amortizacion = sum(monto_amortizacion)) %>% 
+  ungroup() %>% 
+  mutate(total_bono = intereses+amortizacion)
+```
+
+```{r,message=FALSE, warning=FALSE, echo = FALSE,out.width='80%',out.height='80%'}
+# grafico_simbolo <- especie_anio %>% 
+#   #pivot_longer(cols=c(intereses,amortizacion,fmi),names_to="tipo",values_to = "val") %>%
+#   #mutate(tipo = factor(tipo,levels=c('fmi','amortizacion','intereses'))) %>% 
+#   ggplot(aes(as.factor(anio),y=total_bono,group=simbolo,fill=simbolo))+
+#   geom_col()+
+#   theme_minimal()+
+#   ggthemes::scale_fill_pander()+
+#   scale_y_continuous(labels = scales::number_format(scale = 1/1e+6,big.mark = '.'))+
+#   theme(legend.position = 'top',
+#         axis.text.x = element_text(angle=90))+
+#   labs(x='',y='',title='Vencimientos de bonos en dólares',
+#        subtitle='En millones de USD') 
+
+hchart(especie_anio,"column",
+  hcaes(x = anio, y = total_bono, group = simbolo)) %>% 
+  hc_plotOptions(column = list(stacking = "normal")) %>%
+   hc_title(text = "Vencimientos de bonos en dólares") %>%
+  hc_subtitle(text = "")
+```
+
+---
+
+
+En el período 2025-2034 se concentran, además, los vencimientos del acuerdo Extended Funds Facilities (EFF) celebrado con el Fondo Monetario Internacional. Al incorporar estos vencimientos (incluyendo capital e intereses), en este período los vencimientos promedian los US\$`r prom_25_34_fmi/1e+6` millones al año.
+
+
+```{r,message=FALSE, warning=FALSE, echo = FALSE,out.width='80%',out.height='80%'}
+total_anio_long <- total_anio %>% 
+  pivot_longer(cols=c(intereses,amortizacion,fmi),values_to = 'val',names_to = 'tipo') %>% 
+  mutate(tipo=factor(tipo,levels=c('fmi','amortizacion','intereses')))
+hchart(total_anio_long,"column",
+  hcaes(x = anio, y = val, group = tipo)) %>% 
+  hc_plotOptions(column = list(stacking = "normal")) %>%
+   hc_title(text = "Vencimientos de bonos en dólares") %>%
+  hc_subtitle(text = "")
+```
+
+---
+
+```{r,message=FALSE, warning=FALSE, echo = FALSE}
+duration_prom <- resumen_bonos %>% 
+  mutate(duration_pond = duration * part_monto,
+         dm_pond = duration_mod * part_monto) %>% 
+  summarise(duration_prom = sum(duration_pond),
+            duration_mod_prom = sum(dm_pond))
+```
+
+
+
+En la actualidad, el rendimiento de los bonos argentinos torna imposible el acceso a los mercados de deuda para refinanciar los vencimientos más cercanos. La duration promedio del stock de bonos en dólares es de `r duration_prom[,1]` años y la duration modificada de `r duration_prom[,2]`. La curva de renidimentos está invertida, es decir, los rendimientos de los bonos más largos son más bajos que los correspondientes a los más cortos.
+
+```{r,message=FALSE, warning=FALSE, echo = FALSE,out.width='80%',out.height='80%'}
+curva_rendimientos <-  resumen_bonos %>% 
+  filter(moneda=='USD') %>% 
+  ggplot(aes(x=duration_mod,y=tir,color=ley))+
+  geom_point()+
+  geom_text(aes(label=simbolo),vjust=1.2,show.legend = F)+
+  geom_smooth(method = "glm", formula = y~x,
+              method.args = list(family = gaussian(link = 'log')),linetype='dashed',se = F,
+              alpha=.5)+
+  scale_y_continuous(labels=scales::percent_format())+
+  scale_x_continuous(breaks = seq(1,6,by=.5))+
+  theme_minimal()+
+  scale_color_manual(name='',values = c('#75aadb','#fcbf45'))+
+  theme(legend.position = 'top')+
+  labs(y='TIR (%)',x='Duration modificada',title='Bonos en USD',
+       subtitle = 'Curva de rendimientos según ley')
+plotly::ggplotly(curva_rendimientos)
+
+
+
+```
+
