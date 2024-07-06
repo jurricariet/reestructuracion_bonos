@@ -4,7 +4,7 @@ library(tidyverse)
 bonos <- list()
 
 
-ruta <- 'Cashflow - Bonos - TABLEAU.xlsx'
+ruta <- 'Propuesta Bonos.xlsx'
 
 # Cantidad de hojas en el excel
 
@@ -31,7 +31,7 @@ lista_bonos <- data.frame(simbolo=c('AL29',
                  'VM43',
                  'SOB43'))
 
-hojas <- hojas[hojas %in% lista_bonos$simbolo]
+hojas <- hojas[str_detect(hojas, paste(lista_bonos$simbolo, collapse="|"))]
 
 # Recorro las hojas con los cashflow y las voy guardando en la lista
 for (i in 1:length(hojas)){
@@ -48,6 +48,7 @@ for (i in 1:length(hojas)){
 # Uno todos los cashflow en un solo data frame
 
 bonos_data <- do.call(rbind,bonos) %>% 
+  mutate(simbolo = substr(simbolo,6,nchar(simbolo))) %>% 
   filter(!is.na(Plazo) & (!is.na(TNA))) %>% 
   mutate(ley = ifelse(simbolo %in% c('AL29',
                                      'AL30',
@@ -72,6 +73,10 @@ bonos_df <- bonos_data %>%
   group_by(fecha = Plazo,ley,original) %>% 
   summarise(tasa_prom = mean(TNA))
 
+# Guardo los datos en excel
+#openxlsx::write.xlsx(bonos_df,'tasas_promedio_bonos.xlsx')
+
+
 bonos_df %>% 
   ggplot(aes(x=fecha,y=tasa_prom,group=original,color=original))+
   geom_line()+
@@ -81,6 +86,7 @@ bonos_df %>%
   ggthemes::scale_color_tableau(name='')+
   scale_y_continuous(labels = scales::percent_format())+
   theme(legend.position = 'top')
+
 
 ggsave('tna_prom.jpg',width=8,height=4)
 
